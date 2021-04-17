@@ -3,9 +3,12 @@ package exercise.find.roots;
 import android.app.IntentService;
 import android.content.Intent;
 import android.util.Log;
+import java.util.concurrent.TimeUnit;
 
 public class CalculateRootsService extends IntentService {
 
+  public static final String FOUND_ROOTS_ACTION = "found_roots";
+  public static final String FOUND_ROOTS_FAILURE_ACTION = "found_roots_failure";
 
   public CalculateRootsService() {
     super("CalculateRootsService");
@@ -14,32 +17,45 @@ public class CalculateRootsService extends IntentService {
   @Override
   protected void onHandleIntent(Intent intent) {
     if (intent == null) return;
+
+    long timeoutInMiliseconds;
+    if (BuildConfig.DEBUG) {
+      timeoutInMiliseconds = 200;
+    } else {
+      timeoutInMiliseconds = TimeUnit.SECONDS.toMillis(20);
+    }
+
     long timeStartMs = System.currentTimeMillis();
     long numberToCalculateRootsFor = intent.getLongExtra("number_for_service", 0);
     if (numberToCalculateRootsFor <= 0) {
       Log.e("CalculateRootsService", "can't calculate roots for non-positive input" + numberToCalculateRootsFor);
       return;
     }
-    /*
-    TODO:
-     calculate the roots.
-     check the time (using `System.currentTimeMillis()`) and stop calculations if can't find an answer after 20 seconds
-     upon success (found a root, or found that the input number is prime):
-      send broadcast with action "found_roots" and with extras:
-       - "original_number"(long)
-       - "root1"(long)
-       - "root2"(long)
-     upon failure (giving up after 20 seconds without an answer):
-      send broadcast with action "stopped_calculations" and with extras:
-       - "original_number"(long)
-       - "time_until_give_up_seconds"(long) the time we tried calculating
 
-      examples:
-       for input "33", roots are (3, 11)
-       for input "30", roots can be (3, 10) or (2, 15) or other options
-       for input "17", roots are (17, 1)
-       for input "829851628752296034247307144300617649465159", after 20 seconds give up
-
-     */
+    for (long i = 2; i < numberToCalculateRootsFor / 2; i++) {
+      long elapsedTime = System.currentTimeMillis() - timeStartMs;
+      if (numberToCalculateRootsFor % i == 0) {
+        Intent rootsIntent = new Intent(FOUND_ROOTS_ACTION);
+        rootsIntent.putExtra("original_number", numberToCalculateRootsFor);
+        rootsIntent.putExtra("root1", i);
+        rootsIntent.putExtra("root2", numberToCalculateRootsFor / i);
+        rootsIntent.putExtra("calculation_time", elapsedTime);
+        rootsIntent.putExtra("is_prime", false);
+        this.sendBroadcast(rootsIntent);
+        return;
+      }
+      if (elapsedTime >= timeoutInMiliseconds) {
+        Intent failureIntent = new Intent(FOUND_ROOTS_FAILURE_ACTION);
+        failureIntent.putExtra("original_number", numberToCalculateRootsFor);
+        failureIntent.putExtra("time_until_give_up_seconds", elapsedTime);
+        this.sendBroadcast(failureIntent);
+      }
+    }
+    long elapsedTime = System.currentTimeMillis() - timeStartMs;
+    Intent rootsIntent = new Intent(FOUND_ROOTS_ACTION);
+    rootsIntent.putExtra("original_number", numberToCalculateRootsFor);
+    rootsIntent.putExtra("calculationTime", elapsedTime);
+    rootsIntent.putExtra("is_prime", true);
+    this.sendBroadcast(rootsIntent);
   }
 }

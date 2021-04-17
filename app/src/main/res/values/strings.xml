@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">FindRoots</string>
+    <string name="text_success">Success!</string>
+    <string name="text_input">Input: %d</string>
+    <string name="text_calc_time">Calculation Time: %d ms</string>
+    <string name="text_calc_result">Result: %d, %d</string>
+    <string name="text_is_prime">Number is prime!</string>
 </resources>
